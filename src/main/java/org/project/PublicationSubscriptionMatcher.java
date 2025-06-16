@@ -2,6 +2,7 @@ package org.project;
 
 import org.apache.flink.api.common.state.MapStateDescriptor;
 import org.apache.flink.api.common.state.ReadOnlyBroadcastState;
+import org.apache.flink.api.java.tuple.Tuple2;
 import org.apache.flink.streaming.api.functions.co.BroadcastProcessFunction;
 import org.apache.flink.util.Collector;
 import org.project.PublicationOuterClass.Publication;
@@ -9,7 +10,7 @@ import org.project.PublicationOuterClass.Publication;
 import java.util.Map;
 
 public class PublicationSubscriptionMatcher
-        extends BroadcastProcessFunction<Publication, SubscriptionWrapper, String> {
+        extends BroadcastProcessFunction<Publication, SubscriptionWrapper, Tuple2<String, Publication>> {
 
     private final MapStateDescriptor<String, Subscription> descriptor =
             new MapStateDescriptor<>("subscriptions", String.class, Subscription.class);
@@ -18,16 +19,13 @@ public class PublicationSubscriptionMatcher
     public void processBroadcastElement(
             SubscriptionWrapper wrapper,
             Context ctx,
-            Collector<String> out) throws Exception {
+            Collector<Tuple2<String, Publication>> out) throws Exception {
 
         String topicId = wrapper.getTopicId();
         Subscription subscription = wrapper.getSubscription();
 
         if (topicId != null && subscription != null) {
             ctx.getBroadcastState(descriptor).put(topicId, subscription);
-            System.out.println("[INFO] Added subscription with topic_id: " + topicId);
-        } else {
-            System.err.println("[WARN] Skipped invalid subscription wrapper: " + wrapper);
         }
     }
 
@@ -35,7 +33,7 @@ public class PublicationSubscriptionMatcher
     public void processElement(
             Publication publication,
             ReadOnlyContext ctx,
-            Collector<String> out) throws Exception {
+            Collector<Tuple2<String, Publication>> out) throws Exception {
 
         ReadOnlyBroadcastState<String, Subscription> subscriptions =
                 ctx.getBroadcastState(descriptor);
@@ -45,9 +43,11 @@ public class PublicationSubscriptionMatcher
             Subscription subscription = entry.getValue();
 
             if (Matcher.matches(publication, subscription)) {
-                String message = String.format("Matched topic_id: %s -> %s", topicId, publication.toString());
-                out.collect(message); // This is what goes to Kafka or print
-                System.out.println("[MATCH] " + message);
+                out.collect(new Tuple2<>(topicId, publication));
+                System.out.println("!!!!!!!!! processElement Matched: " + topicId + " " + publication.toString());
+            }
+            else {
+                System.out.println("!!!!!!!!!  processElement NOT Matched: " + topicId + " " + publication.toString());
             }
         }
     }

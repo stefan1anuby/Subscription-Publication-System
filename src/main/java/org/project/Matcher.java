@@ -6,20 +6,38 @@ import java.time.LocalDate;
 public class Matcher {
     public static boolean matches(PublicationOuterClass.Publication publication, Subscription subscription) {
         for (SubscriptionCondition condition : subscription.getConditions()) {
-            try {
-                String fieldName = condition.field;
-                String operator = condition.operator;
-                String expectedValue = condition.value;
+            String fieldName = condition.field;
+            String operator = condition.operator;
+            String expectedValue = condition.value;
 
-                Field field = PublicationOuterClass.Publication.class.getDeclaredField(fieldName);
-                field.setAccessible(true);
-                Object actualValue = field.get(publication);
+            Object actualValue;
 
-                if (!evaluate(actualValue, operator, expectedValue)) {
+            // Manual mapping from field name → actual value
+            switch (fieldName) {
+                case "stationId":
+                    actualValue = publication.getStationId();
+                    break;
+                case "city":
+                    actualValue = publication.getCity();
+                    break;
+                case "temp":
+                    actualValue = publication.getTemp();
+                    break;
+                case "rain":
+                    actualValue = publication.getRain();
+                    break;
+                case "wind":
+                    actualValue = publication.getWind();
+                    break;
+                case "direction":
+                    actualValue = publication.getDirection();
+                    break;
+                default:
+                    System.err.println("Unknown field in condition: " + fieldName);
                     return false;
-                }
-            } catch (Exception e) {
-                e.printStackTrace();
+            }
+
+            if (!evaluate(actualValue, operator, expectedValue)) {
                 return false;
             }
         }

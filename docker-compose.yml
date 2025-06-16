@@ -45,15 +45,3 @@ services:
         jobmanager.rpc.address: jobmanager
         taskmanager.numberOfTaskSlots: 2
 
-  submit-job:
-    image: flink:1.17.1-scala_2.12
-    depends_on:
-      - jobmanager
-      - taskmanager
-      - kafka
-    entrypoint: [ "/bin/sh", "-c" ]
-    command: >
-      "sleep 10 &&
-       /opt/flink/bin/flink run -c org.project.Main /opt/flink/usrlib/Project.jar"
-    volumes:
-      - ./job:/opt/flink/usrlib
